@@ -205,6 +205,7 @@ tr:last-child td{border-bottom:none}tbody tr:hover td{background:#f0f7ff}
       <div class="nav-item" data-page="hpp"><span class="ni">🧮</span> HPP</div>
       <div class="nav-sec">Transaksi</div>
       <div class="nav-item" data-page="penjualan"><span class="ni">🛒</span> Penjualan</div>
+      <div class="nav-item" data-page="sampel"><span class="ni">🎁</span> Sampel Gratis</div>
       <div class="nav-item" data-page="pengeluaran"><span class="ni">💸</span> Pengeluaran</div>
       <div class="nav-sec">Keuangan</div>
       <div class="nav-item" data-page="modal"><span class="ni">🏦</span> Modal Usaha</div>
@@ -269,8 +270,13 @@ tr:last-child td{border-bottom:none}tbody tr:hover td{background:#f0f7ff}
             <table id="dash-metode-table"><thead><tr><th>Metode</th><th>Tx</th><th>Total</th></tr></thead><tbody></tbody></table>
           </div>
         </div>
-        <div class="tw"><div class="th"><h3>📝 Transaksi Terbaru</h3></div>
-          <table id="recent-tx-table"><thead><tr><th>Tanggal</th><th>Jenis</th><th>Keterangan</th><th>Metode</th><th>Nominal</th></tr></thead><tbody></tbody></table>
+        <div class="two-col" style="margin-bottom:14px">
+          <div class="tw"><div class="th"><h3>🎁 Sampel Diberikan</h3><span id="dash-sampel-label" class="badge gray" style="font-size:.66rem"></span></div>
+            <table id="dash-sampel-table"><thead><tr><th>Menu</th><th>Qty</th><th>Nilai HPP</th></tr></thead><tbody></tbody></table>
+          </div>
+          <div class="tw"><div class="th"><h3>📝 Transaksi Terbaru</h3></div>
+            <table id="recent-tx-table"><thead><tr><th>Tanggal</th><th>Jenis</th><th>Keterangan</th><th>Metode</th><th>Nominal</th></tr></thead><tbody></tbody></table>
+          </div>
         </div>
       </div>
 
@@ -337,6 +343,37 @@ tr:last-child td{border-bottom:none}tbody tr:hover td{background:#f0f7ff}
         <div class="stat-row" id="jual-stats"></div>
         <div class="tw"><div class="th"><h3>Riwayat Penjualan</h3><input id="jual-filter" class="fi" type="month"></div>
           <table id="jual-table"><thead><tr><th>Tanggal</th><th>Menu</th><th>Qty</th><th>Total</th><th>Metode</th><th>Catatan</th><th>Aksi</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+
+      <!-- SAMPEL GRATIS -->
+      <div class="page" id="page-sampel">
+        <div class="fs">
+          <div class="ft" id="sampel-form-title">🎁 Catat Sampel Gratis</div>
+          <div style="font-size:.81rem;color:var(--text-3);margin-bottom:12px;background:var(--amber-lt);border:1.5px solid #fcd34d;border-radius:8px;padding:9px 12px">
+            💡 Sampel adalah produk yang diberikan <strong>gratis</strong> kepada konsumen untuk uji coba. Tidak menambah pendapatan, tapi tercatat sebagai biaya promosi.
+          </div>
+          <input type="hidden" id="edit-sampel-id">
+          <div class="fg-grid">
+            <div class="fg"><label>Tanggal</label><input id="sp-tanggal" type="date"></div>
+            <div class="fg"><label>Menu</label><select id="sp-menu"><option value="">— Pilih Menu —</option></select></div>
+            <div class="fg"><label>Qty</label><input id="sp-qty" type="number" min="1" value="1"></div>
+            <div class="fg"><label>Nilai HPP Estimasi (Rp)</label><input id="sp-hpp" type="number" placeholder="0" readonly style="background:#f9fafb"></div>
+            <div class="fg"><label>Diberikan Kepada</label><input id="sp-kepada" placeholder="Nama / keterangan penerima"></div>
+            <div class="fg"><label>Catatan</label><input id="sp-catatan" placeholder="Tujuan sampel, event, dll."></div>
+          </div>
+          <div class="fa">
+            <button id="btn-save-sampel" class="btn btn-green">🎁 Simpan Sampel</button>
+            <button id="btn-cancel-sampel" class="btn btn-outline" style="display:none">✕ Batal</button>
+          </div>
+        </div>
+        <div class="stat-row" id="sampel-stats"></div>
+        <div class="tw">
+          <div class="th"><h3>Riwayat Sampel</h3><input id="sampel-filter" class="fi" type="month"></div>
+          <table id="sampel-table">
+            <thead><tr><th>Tanggal</th><th>Menu</th><th>Qty</th><th>Nilai HPP</th><th>Diberikan Kepada</th><th>Catatan</th><th>Aksi</th></tr></thead>
+            <tbody></tbody>
+          </table>
         </div>
       </div>
 
@@ -556,7 +593,7 @@ const mkCard = (cl,ic,lbl,val,sub="") =>
    <div class="lbl">${lbl}</div><div class="val">${val}</div>${sub?`<div class="sub">${sub}</div>`:""}</div>`;
 
 let curUser=null, curProfile=null;
-let S={menus:[],hpp:[],penjualan:[],pengeluaran:[],modal_usaha:[],metode:[],transfer:[]};
+let S={menus:[],hpp:[],penjualan:[],sampel:[],pengeluaran:[],modal_usaha:[],metode:[],transfer:[]};
 let unsubs=[];
 
 // ── CRUD ─────────────────────────────────────────────
@@ -613,8 +650,8 @@ function showApp(){
   $("sb-role").textContent=curProfile.role==="admin"?"👑 Admin":"🧾 Kasir";
   $("current-date").textContent=new Date().toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   const td=today();
-  ["j-tanggal","k-tanggal","mo-tanggal","tf-tanggal"].forEach(id=>{const e=$(id);if(e)e.value=td;});
-  ["jual-filter","keluar-filter","laporan-filter","kas-filter-bln"].forEach(id=>{const e=$(id);if(e)e.value=td.slice(0,7);});
+  ["j-tanggal","k-tanggal","mo-tanggal","tf-tanggal","sp-tanggal"].forEach(id=>{const e=$(id);if(e)e.value=td;});
+  ["jual-filter","keluar-filter","laporan-filter","kas-filter-bln","sampel-filter"].forEach(id=>{const e=$(id);if(e)e.value=td.slice(0,7);});
   $("dash-from").value=$("dash-to").value=td;
   const ini=curProfile.nama.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
   $("profil-av").textContent=ini;$("profil-nama").textContent=curProfile.nama;
@@ -625,14 +662,14 @@ function showApp(){
 
 // ── NAV ───────────────────────────────────────────────
 const TITLES={dashboard:"Dashboard",menu:"Menu & Harga",hpp:"Perhitungan HPP",penjualan:"Penjualan",
-  pengeluaran:"Pengeluaran",modal:"Modal Usaha",kas:"Kas & Rekening",laporan:"Laporan L/R",backup:"Backup & Export",profil:"Profil & Akun"};
+  sampel:"Sampel Gratis",pengeluaran:"Pengeluaran",modal:"Modal Usaha",kas:"Kas & Rekening",laporan:"Laporan L/R",backup:"Backup & Export",profil:"Profil & Akun"};
 function showPage(name){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
   $("page-"+name).classList.add("active");
   document.querySelector(`.nav-item[data-page="${name}"]`)?.classList.add("active");
   $("page-title").textContent=TITLES[name]||name;
-  if(name==="hpp"||name==="penjualan")populateMenuSelects();
+  if(name==="hpp"||name==="penjualan"||name==="sampel")populateMenuSelects();
   if(["penjualan","pengeluaran","modal","kas"].includes(name))populateMetodeSelects();
   if(name==="hpp"&&!$("hpp-ing-list").children.length)addIngRow();
   refresh();}
@@ -640,7 +677,7 @@ function showPage(name){
 // ── SYNC ──────────────────────────────────────────────
 const DEFAULT_METODE=[{id:"cash",nama:"Cash",icon:"💵"},{id:"dana",nama:"Dana",icon:"📱"},{id:"bank",nama:"Bank",icon:"🏦"}];
 function subscribeAll(){unsubs.forEach(f=>f());unsubs=[];
-  ["menus","hpp","penjualan","pengeluaran","modal_usaha","metode","transfer"].forEach(name=>{
+  ["menus","hpp","penjualan","sampel","pengeluaran","modal_usaha","metode","transfer"].forEach(name=>{
     const go=ord=>{
       const q=ord?C(name).orderBy("createdAt","asc"):C(name);
       return q.onSnapshot(snap=>{S[name]=snap.docs.map(d=>({id:d.id,...d.data()}));
@@ -648,7 +685,7 @@ function subscribeAll(){unsubs.forEach(f=>f());unsubs=[];
         refresh();},()=>{if(ord)unsubs.push(go(false));});};
     unsubs.push(go(true));});}
 function refresh(){const name=document.querySelector(".page.active")?.id?.replace("page-","");if(!name)return;
-  ({dashboard:renderDashboard,menu:renderMenu,hpp:renderHPP,penjualan:renderJual,pengeluaran:renderKeluar,
+  ({dashboard:renderDashboard,menu:renderMenu,hpp:renderHPP,penjualan:renderJual,sampel:renderSampel,pengeluaran:renderKeluar,
     modal:renderModal,kas:renderKas,laporan:renderLaporan,backup:renderBackup})[name]?.();}
 
 // ── KAS PAGE ──────────────────────────────────────────
@@ -709,6 +746,47 @@ function doTransfer(){const dari=_v("tf-dari"),ke=_v("tf-ke"),jml=+_v("tf-jumlah
   if(!jml)return alert("Masukkan jumlah!");if(!tgl)return alert("Pilih tanggal!");
   spin(true);addItem("transfer",{dari,ke,jumlah:jml,tanggal:tgl,ket}).then(()=>{$("tf-jumlah").value="";$("tf-ket").value="";alert("✅ Transfer berhasil!");}).catch(e=>alert(e.message)).finally(()=>spin(false));}
 
+// ── SAMPEL ────────────────────────────────────────────
+function updateSampelHPP(){
+  const mid=_v("sp-menu");
+  const hpp=S.hpp.find(h=>h.menu_id===mid);
+  const qty=+_v("sp-qty")||1;
+  $("sp-hpp").value=hpp?(hpp.hpp*qty).toFixed(0):0;}
+function saveSampel(){
+  const mid=_v("sp-menu");if(!mid)return alert("Pilih menu!");
+  const id=_v("edit-sampel-id");
+  const hpp=S.hpp.find(h=>h.menu_id===mid);
+  const qty=+_v("sp-qty")||1;
+  const obj={id,tanggal:_v("sp-tanggal"),menu_id:mid,qty,
+    nilai_hpp:hpp?(hpp.hpp*qty):0,
+    kepada:_v("sp-kepada"),catatan:_v("sp-catatan")};
+  if(!obj.tanggal||!obj.qty)return alert("Lengkapi tanggal dan qty!");
+  spin(true);saveItem("sampel",obj).then(cancelSampel).catch(e=>alert(e.message)).finally(()=>spin(false));}
+function editSampel(id){const s=S.sampel.find(x=>x.id===id);
+  $("edit-sampel-id").value=s.id;$("sp-tanggal").value=s.tanggal;$("sp-menu").value=s.menu_id;
+  $("sp-qty").value=s.qty;$("sp-hpp").value=s.nilai_hpp||0;
+  $("sp-kepada").value=s.kepada||"";$("sp-catatan").value=s.catatan||"";
+  $("sampel-form-title").textContent="✏️ Edit Sampel";$("btn-cancel-sampel").style.display="";scrollTo(0,0);}
+function cancelSampel(){$("edit-sampel-id").value="";$("sp-tanggal").value=today();
+  ["sp-menu","sp-hpp","sp-kepada","sp-catatan"].forEach(i=>$(i).value="");$("sp-qty").value=1;
+  $("sampel-form-title").textContent="🎁 Catat Sampel Gratis";$("btn-cancel-sampel").style.display="none";}
+function renderSampel(){
+  const filter=_v("sampel-filter");
+  const filtered=filter?S.sampel.filter(s=>s.tanggal?.startsWith(filter)):S.sampel;
+  const sorted=[...filtered].sort((a,b)=>(b.tanggal||"").localeCompare(a.tanggal||""));
+  const totQty=filtered.reduce((s,x)=>s+x.qty,0);
+  const totHPP=filtered.reduce((s,x)=>s+(x.nilai_hpp||0),0);
+  $("sampel-stats").innerHTML=sbox("Total Sampel","cblue",filtered.length+" catatan")+
+    sbox("Total Qty","",totQty+" pcs")+
+    sbox("Total Nilai HPP","cred",rp(totHPP));
+  const tb=document.querySelector("#sampel-table tbody");tb.innerHTML="";
+  if(!sorted.length){tb.innerHTML=nodata("🎁","Belum ada sampel dicatat",7);return;}
+  sorted.forEach(s=>{const menu=S.menus.find(m=>m.id===s.menu_id);const tr=document.createElement("tr");
+    tr.innerHTML=`<td class="tx3">${s.tanggal}</td><td><strong>${menu?menu.nama:"—"}</strong></td>
+      <td>${badge("amber",s.qty)}</td><td class="cred fw6">${rp(s.nilai_hpp||0)}</td>
+      <td>${s.kepada||"—"}</td><td class="tx3">${s.catatan||"—"}</td><td></td>`;
+    mkAB(tr,()=>editSampel(s.id),()=>openConfirm("sampel",s.id));tb.appendChild(tr);});}
+
 // ── MENU ──────────────────────────────────────────────
 function saveMenu(){const id=_v("edit-menu-id");
   const obj={id,nama:_v("m-nama").trim(),kategori:_v("m-kategori"),harga:+_v("m-harga"),satuan:_v("m-satuan")||"cup"};
@@ -730,7 +808,7 @@ function renderMenu(){const tb=document.querySelector("#menu-table tbody");tb.in
 
 // ── HPP ───────────────────────────────────────────────
 let hppIngs=[];
-function populateMenuSelects(){["hpp-menu-id","j-menu"].forEach(sid=>{const s=$(sid);if(!s)return;const cur=s.value;
+function populateMenuSelects(){["hpp-menu-id","j-menu","sp-menu"].forEach(sid=>{const s=$(sid);if(!s)return;const cur=s.value;
   s.innerHTML="<option value=''>— Pilih Menu —</option>";S.menus.forEach(m=>s.innerHTML+=`<option value="${m.id}">${m.nama}</option>`);if(cur)s.value=cur;});}
 function addIngRow(b="",j=0,s="gram",h=0){const id="i"+Date.now();hppIngs.push(id);
   const row=document.createElement("div");row.className="ing-row";row.id=id;
@@ -885,8 +963,21 @@ function renderDashboard(){const{from,to,label}=getDR();
   const pR=jF.reduce((s,j)=>s+j.total,0),kR=kF.reduce((s,k)=>s+k.jumlah,0),net=pR-kR,qR=jF.reduce((s,j)=>s+j.qty,0);
   const tM=S.modal_usaha.filter(m=>m.jenis==="masuk").reduce((s,m)=>s+m.jumlah,0)-S.modal_usaha.filter(m=>m.jenis==="keluar").reduce((s,m)=>s+m.jumlah,0);
   $("dash-period-label").textContent="📅 "+label;
+  // Sampel dashboard
+  const sampelF=S.sampel.filter(s=>s.tanggal&&inRange(s.tanggal,from,to));
+  const totSampelQty=sampelF.reduce((s,x)=>s+x.qty,0);
+  const totSampelHPP=sampelF.reduce((s,x)=>s+(x.nilai_hpp||0),0);
+  $("dash-sampel-label").textContent=label;
+  const tbSm=document.querySelector("#dash-sampel-table tbody");tbSm.innerHTML="";
+  if(!sampelF.length){tbSm.innerHTML=nodata("🎁","Tidak ada sampel periode ini",3);}
+  else{const ms2={};sampelF.forEach(s=>{ms2[s.menu_id]=ms2[s.menu_id]||{qty:0,hpp:0};ms2[s.menu_id].qty+=s.qty;ms2[s.menu_id].hpp+=(s.nilai_hpp||0);});
+    Object.entries(ms2).sort((a,b)=>b[1].qty-a[1].qty).forEach(([mid,v])=>{const menu=S.menus.find(m=>m.id===mid);
+      tbSm.innerHTML+=`<tr><td><strong>${menu?menu.nama:"—"}</strong></td><td>${badge("amber",v.qty)}</td><td class="cred fw6">${rp(v.hpp)}</td></tr>`;});
+    tbSm.innerHTML+=`<tr style="background:#fff5f5"><td><strong>Total</strong></td><td>${badge("amber",totSampelQty)}</td><td class="cred fwb">${rp(totSampelHPP)}</td></tr>`;}
+  // Tambahkan card sampel
   $("dash-cards").innerHTML=mkCard("blue","🛒","Transaksi",jF.length+" tx",qR+" pcs")+mkCard("green","📈","Pendapatan",rp(pR),"periode ini")+
     mkCard("red","📉","Pengeluaran",rp(kR),"periode ini")+mkCard(net>=0?"green":"red",net>=0?"💰":"⚠️","Laba/Rugi",rp(net),net>=0?"Laba ✅":"Rugi ❌")+
+    mkCard("amber","🎁","Sampel",totSampelQty+" pcs","nilai HPP "+rp(totSampelHPP))+
     mkCard("blue","🏦","Modal Bersih",rp(tM),"seluruh waktu");
   // Chart
   const cm=_v("dash-chart-mode")||"monthly";const ch=$("pl-chart");ch.innerHTML="";$("pl-list").innerHTML="";
@@ -991,6 +1082,12 @@ $("btn-save-menu").addEventListener("click",saveMenu);$("btn-cancel-menu").addEv
 $("btn-save-hpp").addEventListener("click",saveHPP);$("btn-preview-hpp").addEventListener("click",previewHPP);$("btn-cancel-hpp").addEventListener("click",cancelHPPEdit);$("btn-add-ing").addEventListener("click",()=>addIngRow());
 $("j-menu").addEventListener("change",updateHJ);$("j-qty").addEventListener("input",calcJT);
 $("btn-save-jual").addEventListener("click",saveJual);$("btn-cancel-jual").addEventListener("click",cancelJual);$("jual-filter").addEventListener("change",renderJual);
+// Sampel events
+$("sp-menu").addEventListener("change",updateSampelHPP);
+$("sp-qty").addEventListener("input",updateSampelHPP);
+$("btn-save-sampel").addEventListener("click",saveSampel);
+$("btn-cancel-sampel").addEventListener("click",cancelSampel);
+$("sampel-filter").addEventListener("change",renderSampel);
 $("btn-save-keluar").addEventListener("click",saveKeluar);$("btn-cancel-keluar").addEventListener("click",cancelKeluar);$("keluar-filter").addEventListener("change",renderKeluar);
 $("btn-save-modal").addEventListener("click",saveModal);$("btn-cancel-modal").addEventListener("click",cancelModal);
 $("btn-add-metode").addEventListener("click",addMetode);$("btn-transfer").addEventListener("click",doTransfer);
