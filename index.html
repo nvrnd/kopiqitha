@@ -153,6 +153,12 @@ tr:last-child td{border-bottom:none}tbody tr:hover td{background:#f0f7ff}
 .kas-icon{font-size:1.5rem;margin-bottom:6px}.kas-name{font-size:.8rem;font-weight:700;color:var(--text-2)}.kas-val{font-size:1.15rem;font-weight:800;margin-top:3px}
 .metode-tag{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--border);border-radius:20px;padding:5px 12px;font-size:.8rem;font-weight:600;margin:3px}
 .del-m{background:none;border:none;cursor:pointer;color:var(--text-4);font-size:.9rem;padding:0;line-height:1;transition:color .15s}.del-m:hover{color:var(--red)}
+/* STOK */
+.stok-ok{color:var(--green);font-weight:800}
+.stok-low{color:var(--amber);font-weight:800}
+.stok-empty{color:var(--red);font-weight:800}
+.btn-stok{background:var(--amber-lt);color:var(--amber);border:1.5px solid #fcd34d;padding:4px 9px;font-size:.72rem;border-radius:6px;font-family:inherit;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-stok:hover{background:#fcd34d}
 /* MODAL */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(17,24,39,.5);z-index:999;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
 .modal-overlay.open{display:flex;animation:mfi .15s}
@@ -274,10 +280,13 @@ tr:last-child td{border-bottom:none}tbody tr:hover td{background:#f0f7ff}
           <div class="tw"><div class="th"><h3>🎁 Sampel Diberikan</h3><span id="dash-sampel-label" class="badge gray" style="font-size:.66rem"></span></div>
             <table id="dash-sampel-table"><thead><tr><th>Menu</th><th>Qty</th><th>Nilai HPP</th></tr></thead><tbody></tbody></table>
           </div>
-          <div class="tw"><div class="th"><h3>📝 Transaksi Terbaru</h3></div>
-            <table id="recent-tx-table"><thead><tr><th>Tanggal</th><th>Jenis</th><th>Keterangan</th><th>Metode</th><th>Nominal</th></tr></thead><tbody></tbody></table>
+          <div class="tw"><div class="th"><h3>📦 Status Stok</h3><span id="dash-stok-alert" class="badge loss" style="display:none;font-size:.66rem"></span></div>
+            <table id="dash-stok-table"><thead><tr><th>Menu</th><th>Stok</th><th>Status</th></tr></thead><tbody></tbody></table>
           </div>
         </div>
+        <div class="tw"><div class="th"><h3>📝 Transaksi Terbaru</h3></div>
+            <table id="recent-tx-table"><thead><tr><th>Tanggal</th><th>Jenis</th><th>Keterangan</th><th>Metode</th><th>Nominal</th></tr></thead><tbody></tbody></table>
+          </div>
       </div>
 
       <!-- MENU -->
@@ -289,11 +298,58 @@ tr:last-child td{border-bottom:none}tbody tr:hover td{background:#f0f7ff}
             <div class="fg"><label>Kategori</label><select id="m-kategori"><option>Kopi</option><option>Non-Kopi</option><option>Makanan</option><option>Lainnya</option></select></div>
             <div class="fg"><label>Harga Jual (Rp)</label><input id="m-harga" type="number" placeholder="0"></div>
             <div class="fg"><label>Satuan</label><input id="m-satuan" value="cup"></div>
+            <div class="fg"><label>Stok Awal</label><input id="m-stok" type="number" value="0" placeholder="0"></div>
+            <div class="fg"><label>Stok Minimum (Alert)</label><input id="m-stok-min" type="number" value="5" placeholder="5"></div>
           </div>
           <div class="fa"><button id="btn-save-menu" class="btn btn-primary">💾 Simpan</button><button id="btn-cancel-menu" class="btn btn-outline" style="display:none">✕ Batal</button></div>
         </div>
-        <div class="tw"><div class="th"><h3>Daftar Menu</h3><span id="menu-count" class="badge blue">0 item</span></div>
-          <table id="menu-table"><thead><tr><th>#</th><th>Nama</th><th>Kategori</th><th>Harga</th><th>Satuan</th><th>Aksi</th></tr></thead><tbody></tbody></table>
+
+        <!-- Edit stok cepat -->
+        <div class="fs" id="stok-edit-panel" style="display:none;border-color:var(--amber);background:var(--amber-lt)">
+          <div class="ft" style="border-color:#fcd34d">✏️ Edit Stok: <span id="stok-edit-nama" style="color:var(--amber)"></span></div>
+          <input type="hidden" id="stok-edit-menu-id">
+          <div class="fg-grid">
+            <div class="fg"><label>Stok Saat Ini</label><input id="stok-edit-current" type="number" readonly style="background:#fff;font-size:1.1rem;font-weight:700;color:var(--amber)"></div>
+            <div class="fg"><label>Jenis Penyesuaian</label>
+              <select id="stok-edit-jenis">
+                <option value="set">📦 Set Stok (isi ulang / koreksi)</option>
+                <option value="tambah">➕ Tambah Stok</option>
+                <option value="kurang">➖ Kurangi Stok</option>
+              </select>
+            </div>
+            <div class="fg"><label>Jumlah</label><input id="stok-edit-jumlah" type="number" placeholder="0" min="0"></div>
+            <div class="fg"><label>Keterangan</label><input id="stok-edit-ket" placeholder="Isi ulang, koreksi, dll."></div>
+          </div>
+          <div class="fa">
+            <button id="btn-save-stok" class="btn btn-primary" style="background:var(--amber);box-shadow:none">💾 Simpan Stok</button>
+            <button id="btn-cancel-stok" class="btn btn-outline">✕ Batal</button>
+          </div>
+        </div>
+
+        <div class="tw">
+          <div class="th">
+            <h3>Daftar Menu &amp; Stok</h3>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span id="menu-count" class="badge blue">0 item</span>
+              <span id="stok-alert-count" class="badge loss" style="display:none">⚠️ Stok Menipis</span>
+            </div>
+          </div>
+          <table id="menu-table">
+            <thead><tr><th>#</th><th>Nama</th><th>Kategori</th><th>Harga</th><th>Satuan</th><th>Stok</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <!-- Riwayat stok -->
+        <div class="tw" style="margin-top:14px">
+          <div class="th">
+            <h3>📋 Riwayat Perubahan Stok</h3>
+            <select id="stok-log-filter" class="fi"><option value="">Semua Menu</option></select>
+          </div>
+          <table id="stok-log-table">
+            <thead><tr><th>Waktu</th><th>Menu</th><th>Perubahan</th><th>Stok Setelah</th><th>Keterangan</th></tr></thead>
+            <tbody></tbody>
+          </table>
         </div>
       </div>
 
@@ -438,7 +494,7 @@ tr:last-child td{border-bottom:none}tbody tr:hover td{background:#f0f7ff}
           </div>
           <div class="fs" style="margin-bottom:0">
             <div class="ft">🔄 Transfer Antar Rekening</div>
-            <div style="font-size:.82rem;color:var(--text-3);margin-bottom:12px">Pindahkan uang antar rekening. Contoh: Dana → Tunai.</div>
+            <div style="font-size:.82rem;color:var(--text-3);margin-bottom:12px">Pindahkan uang antar rekening. Contoh: Dana → Cash.</div>
             <div class="fg" style="margin-bottom:10px"><label>Dari Rekening</label><select id="tf-dari"></select></div>
             <div class="fg" style="margin-bottom:10px"><label>Ke Rekening</label><select id="tf-ke"></select></div>
             <div class="fg" style="margin-bottom:10px"><label>Jumlah (Rp)</label><input id="tf-jumlah" type="number" placeholder="0"></div>
@@ -593,7 +649,7 @@ const mkCard = (cl,ic,lbl,val,sub="") =>
    <div class="lbl">${lbl}</div><div class="val">${val}</div>${sub?`<div class="sub">${sub}</div>`:""}</div>`;
 
 let curUser=null, curProfile=null;
-let S={menus:[],hpp:[],penjualan:[],sampel:[],pengeluaran:[],modal_usaha:[],metode:[],transfer:[]};
+let S={menus:[],hpp:[],penjualan:[],sampel:[],pengeluaran:[],modal_usaha:[],metode:[],transfer:[],stok_log:[]};
 let unsubs=[];
 
 // ── CRUD ─────────────────────────────────────────────
@@ -604,7 +660,7 @@ function saveItem(col,data){if(data.id&&S[col]?.find(x=>x.id===data.id))return u
 
 // ── KAS HELPERS ───────────────────────────────────────
 function getML(id){const m=S.metode.find(x=>x.id===id);return m?(m.icon+" "+m.nama):(id||"—");}
-function getMC(id){if(!id)return"gray";const l=(id||"").toLowerCase();if(l==="tunai")return"green";if(l==="bank")return"blue";if(l==="dana")return"purple";return"amber";}
+function getMC(id){if(!id)return"gray";const l=(id||"").toLowerCase();if(l==="cash")return"green";if(l==="bank")return"blue";if(l==="dana")return"purple";return"amber";}
 function populateMetodeSelects(){
   const ids=["j-metode","k-metode","mo-rekening","tf-dari","tf-ke","kas-filter-m"];
   ids.forEach(sid=>{const s=$(sid);if(!s)return;const cur=s.value;
@@ -675,9 +731,9 @@ function showPage(name){
   refresh();}
 
 // ── SYNC ──────────────────────────────────────────────
-const DEFAULT_METODE=[{id:"tunai",nama:"Tunai",icon:"💵"},{id:"dana",nama:"Dana",icon:"📱"},{id:"bank",nama:"Bank",icon:"🏦"}];
+const DEFAULT_METODE=[{id:"cash",nama:"Cash",icon:"💵"},{id:"dana",nama:"Dana",icon:"📱"},{id:"bank",nama:"Bank",icon:"🏦"}];
 function subscribeAll(){unsubs.forEach(f=>f());unsubs=[];
-  ["menus","hpp","penjualan","sampel","pengeluaran","modal_usaha","metode","transfer"].forEach(name=>{
+  ["menus","hpp","penjualan","sampel","pengeluaran","modal_usaha","metode","transfer","stok_log"].forEach(name=>{
     const go=ord=>{
       const q=ord?C(name).orderBy("createdAt","asc"):C(name);
       return q.onSnapshot(snap=>{S[name]=snap.docs.map(d=>({id:d.id,...d.data()}));
@@ -787,29 +843,141 @@ function renderSampel(){
       <td>${s.kepada||"—"}</td><td class="tx3">${s.catatan||"—"}</td><td></td>`;
     mkAB(tr,()=>editSampel(s.id),()=>openConfirm("sampel",s.id));tb.appendChild(tr);});}
 
-// ── MENU ──────────────────────────────────────────────
+// ── MENU & STOK ───────────────────────────────────────
+// Hitung stok real-time: stok_awal - penjualan - sampel + penyesuaian_log
+function hitungStok(menu_id){
+  const m=S.menus.find(x=>x.id===menu_id);
+  if(!m)return 0;
+  let stok=m.stok||0;
+  // Kurangi dari penjualan
+  S.penjualan.forEach(j=>{if(j.menu_id===menu_id)stok-=j.qty;});
+  // Kurangi dari sampel
+  S.sampel.forEach(s=>{if(s.menu_id===menu_id)stok-=s.qty;});
+  // Tambah/kurangi dari log penyesuaian manual
+  S.stok_log.forEach(l=>{
+    if(l.menu_id===menu_id&&l.jenis==="adj"){
+      stok+=l.delta;
+    }
+  });
+  return stok;
+}
+
 function saveMenu(){const id=_v("edit-menu-id");
-  const obj={id,nama:_v("m-nama").trim(),kategori:_v("m-kategori"),harga:+_v("m-harga"),satuan:_v("m-satuan")||"cup"};
+  const obj={id,nama:_v("m-nama").trim(),kategori:_v("m-kategori"),harga:+_v("m-harga"),
+    satuan:_v("m-satuan")||"cup",stok:+_v("m-stok")||0,stok_min:+_v("m-stok-min")||5};
   if(!obj.nama||!obj.harga)return alert("Nama dan harga wajib!");
   spin(true);saveItem("menus",obj).then(cancelMenuEdit).catch(e=>alert(e.message)).finally(()=>spin(false));}
+
 function editMenu(id){const m=S.menus.find(x=>x.id===id);
-  $("edit-menu-id").value=m.id;$("m-nama").value=m.nama;$("m-kategori").value=m.kategori;$("m-harga").value=m.harga;$("m-satuan").value=m.satuan;
+  $("edit-menu-id").value=m.id;$("m-nama").value=m.nama;$("m-kategori").value=m.kategori;
+  $("m-harga").value=m.harga;$("m-satuan").value=m.satuan;
+  $("m-stok").value=m.stok||0;$("m-stok-min").value=m.stok_min||5;
   $("menu-form-title").textContent="✏️ Edit Menu";$("btn-cancel-menu").style.display="";scrollTo(0,0);}
-function cancelMenuEdit(){["edit-menu-id","m-nama","m-harga"].forEach(i=>$(i).value="");$("m-satuan").value="cup";
+
+function cancelMenuEdit(){["edit-menu-id","m-nama","m-harga"].forEach(i=>$(i).value="");
+  $("m-satuan").value="cup";$("m-stok").value=0;$("m-stok-min").value=5;
   $("menu-form-title").textContent="➕ Tambah Menu Baru";$("btn-cancel-menu").style.display="none";}
-function renderMenu(){const tb=document.querySelector("#menu-table tbody");tb.innerHTML="";
-  if(!S.menus.length){tb.innerHTML=nodata("☕","Belum ada menu",6);return;}
-  S.menus.forEach((m,i)=>{const tr=document.createElement("tr");
+
+// Edit stok panel
+function openStokEdit(menu_id){
+  const m=S.menus.find(x=>x.id===menu_id);if(!m)return;
+  const stokNow=hitungStok(menu_id);
+  $("stok-edit-menu-id").value=menu_id;
+  $("stok-edit-nama").textContent=m.nama;
+  $("stok-edit-current").value=stokNow;
+  $("stok-edit-jenis").value="set";
+  $("stok-edit-jumlah").value="";
+  $("stok-edit-ket").value="";
+  $("stok-edit-panel").style.display="";
+  scrollTo(0,0);}
+
+function saveStok(){
+  const mid=_v("stok-edit-menu-id");
+  const jenis=_v("stok-edit-jenis");
+  const jumlah=+_v("stok-edit-jumlah");
+  const ket=_v("stok-edit-ket")||"Penyesuaian stok";
+  if(!mid)return;
+  if(isNaN(jumlah)||jumlah<0)return alert("Masukkan jumlah yang valid!");
+  const stokNow=hitungStok(mid);
+  let delta=0;
+  if(jenis==="set")    delta=jumlah-stokNow;  // ubah ke nilai absolut
+  else if(jenis==="tambah") delta=jumlah;
+  else if(jenis==="kurang") delta=-jumlah;
+  spin(true);
+  addItem("stok_log",{menu_id:mid,jenis:"adj",delta,ket,
+    stok_setelah:stokNow+delta}).then(()=>{
+    $("stok-edit-panel").style.display="none";
+  }).catch(e=>alert(e.message)).finally(()=>spin(false));}
+
+function renderMenu(){
+  // Update filter log
+  const slf=$("stok-log-filter");if(slf){const cur=slf.value;
+    slf.innerHTML="<option value=''>Semua Menu</option>";
+    S.menus.forEach(m=>slf.innerHTML+=`<option value="${m.id}">${m.nama}</option>`);
+    if(cur)slf.value=cur;}
+
+  const tb=document.querySelector("#menu-table tbody");tb.innerHTML="";
+  if(!S.menus.length){tb.innerHTML=nodata("☕","Belum ada menu",8);return;}
+
+  let alertCount=0;
+  S.menus.forEach((m,i)=>{
+    const stok=hitungStok(m.id);
+    const min=m.stok_min||5;
+    const isEmpty=stok<=0;
+    const isLow=stok>0&&stok<=min;
+    if(isEmpty||isLow)alertCount++;
+
+    const stokCls=isEmpty?"stok-empty":isLow?"stok-low":"stok-ok";
+    const stokBadge=isEmpty?badge("loss","Habis"):isLow?badge("amber","⚠️ Menipis"):badge("profit","✅ Oke");
+
+    const tr=document.createElement("tr");
+    if(isEmpty)tr.style.background="#fff5f5";
+    else if(isLow)tr.style.background="#fffbeb";
     tr.innerHTML=`<td class="tx3 fw6">${i+1}</td><td><strong>${m.nama}</strong></td>
       <td>${badge("blue",m.kategori)}</td><td class="fwb cblue">${rp(m.harga)}</td>
-      <td>${badge("gray",m.satuan)}</td><td></td>`;
-    mkAB(tr,()=>editMenu(m.id),()=>openConfirm("menus",m.id));tb.appendChild(tr);});
-  $("menu-count").textContent=S.menus.length+" item";}
+      <td>${badge("gray",m.satuan)}</td>
+      <td><span class="${stokCls}">${stok}</span> <span class="tx3" style="font-size:.75rem">${m.satuan}</span></td>
+      <td>${stokBadge}</td><td></td>`;
+    const ab=document.createElement("div");ab.className="ab";
+    const bs=document.createElement("button");bs.className="btn-stok btn-sm";bs.textContent="📦 Stok";
+    bs.onclick=()=>openStokEdit(m.id);
+    const be=document.createElement("button");be.className="btn btn-edit btn-sm";be.textContent="✏️";be.onclick=()=>editMenu(m.id);
+    const bd=document.createElement("button");bd.className="btn btn-danger btn-sm";bd.textContent="🗑";bd.onclick=()=>openConfirm("menus",m.id);
+    ab.append(bs,be,bd);tr.lastElementChild.append(ab);tb.appendChild(tr);});
+
+  $("menu-count").textContent=S.menus.length+" item";
+  const alertBadge=$("stok-alert-count");
+  if(alertCount>0){alertBadge.style.display="";alertBadge.textContent="⚠️ "+alertCount+" stok menipis/habis";}
+  else alertBadge.style.display="none";
+
+  // Render log stok
+  const logFilter=_v("stok-log-filter");
+  const logs=[...S.stok_log].filter(l=>!logFilter||l.menu_id===logFilter)
+    .sort((a,b)=>{const ta=a.createdAt?.toDate?.()?.getTime()||0;const tb2=b.createdAt?.toDate?.()?.getTime()||0;return tb2-ta;})
+    .slice(0,50);
+  const tbL=document.querySelector("#stok-log-table tbody");tbL.innerHTML="";
+  if(!logs.length){tbL.innerHTML=nodata("📋","Belum ada riwayat stok",5);return;}
+  logs.forEach(l=>{
+    const menu=S.menus.find(m=>m.id===l.menu_id);
+    const tgl=l.createdAt?.toDate?.()?.toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})||"—";
+    const isPlus=l.delta>=0;
+    tbL.innerHTML+=`<tr>
+      <td class="tx3" style="font-size:.78rem">${tgl}</td>
+      <td><strong>${menu?menu.nama:"—"}</strong></td>
+      <td class="fwb" style="color:${isPlus?"var(--green)":"var(--red)"}">${isPlus?"+":""}${l.delta}</td>
+      <td class="fw6">${l.stok_setelah??""}</td>
+      <td class="tx3">${l.ket||"—"}</td></tr>`;});
+}
 
 // ── HPP ───────────────────────────────────────────────
 let hppIngs=[];
 function populateMenuSelects(){["hpp-menu-id","j-menu","sp-menu"].forEach(sid=>{const s=$(sid);if(!s)return;const cur=s.value;
-  s.innerHTML="<option value=''>— Pilih Menu —</option>";S.menus.forEach(m=>s.innerHTML+=`<option value="${m.id}">${m.nama}</option>`);if(cur)s.value=cur;});}
+  s.innerHTML="<option value=''>— Pilih Menu —</option>";
+  S.menus.forEach(m=>{
+    const stok=hitungStok(m.id);
+    const stokInfo=stok<=0?" 🔴 HABIS":stok<=(m.stok_min||5)?" ⚠️ ("+stok+")":""
+    s.innerHTML+=`<option value="${m.id}">${m.nama}${stokInfo}</option>`;});
+  if(cur)s.value=cur;});}
 function addIngRow(b="",j=0,s="gram",h=0){const id="i"+Date.now();hppIngs.push(id);
   const row=document.createElement("div");row.className="ing-row";row.id=id;
   row.innerHTML=`<div class="fg"><label>Nama Bahan</label><input placeholder="Kopi..." value="${b}" class="in"></div>
@@ -852,8 +1020,11 @@ function updateHJ(){const m=S.menus.find(x=>x.id===_v("j-menu"));$("j-harga").va
 function calcJT(){$("j-total").value=(+_v("j-qty")||0)*(+_v("j-harga")||0);}
 function saveJual(){const mid=_v("j-menu");if(!mid)return alert("Pilih menu!");
   const met=_v("j-metode");if(!met)return alert("Pilih metode pembayaran!");
+  const qty=+_v("j-qty")||1;
+  const stokNow=hitungStok(mid);
+  if(stokNow<qty){if(!confirm(`⚠️ Stok ${S.menus.find(m=>m.id===mid)?.nama} hanya ${stokNow} tersisa, tapi Anda menjual ${qty}. Lanjutkan?`))return;}
   const id=_v("edit-jual-id");
-  const obj={id,tanggal:_v("j-tanggal"),menu_id:mid,qty:+_v("j-qty"),harga:+_v("j-harga"),total:+_v("j-total"),metode:met,catatan:_v("j-catatan")};
+  const obj={id,tanggal:_v("j-tanggal"),menu_id:mid,qty,harga:+_v("j-harga"),total:+_v("j-total"),metode:met,catatan:_v("j-catatan")};
   if(!obj.tanggal||!obj.qty)return alert("Lengkapi data!");
   spin(true);saveItem("penjualan",obj).then(cancelJual).catch(e=>alert(e.message)).finally(()=>spin(false));}
 function editJual(id){const j=S.penjualan.find(x=>x.id===id);
@@ -974,10 +1145,15 @@ function renderDashboard(){const{from,to,label}=getDR();
     Object.entries(ms2).sort((a,b)=>b[1].qty-a[1].qty).forEach(([mid,v])=>{const menu=S.menus.find(m=>m.id===mid);
       tbSm.innerHTML+=`<tr><td><strong>${menu?menu.nama:"—"}</strong></td><td>${badge("amber",v.qty)}</td><td class="cred fw6">${rp(v.hpp)}</td></tr>`;});
     tbSm.innerHTML+=`<tr style="background:#fff5f5"><td><strong>Total</strong></td><td>${badge("amber",totSampelQty)}</td><td class="cred fwb">${rp(totSampelHPP)}</td></tr>`;}
-  // Tambahkan card sampel
+  // Stok alert count
+  const stokHabis=S.menus.filter(m=>{const s=hitungStok(m.id);return s<=0;}).length;
+  const stokLow=S.menus.filter(m=>{const s=hitungStok(m.id);return s>0&&s<=(m.stok_min||5);}).length;
+  const stokAlertCard=stokHabis>0?mkCard("red","📦","Stok Habis",stokHabis+" menu","perlu restock segera!"):
+    stokLow>0?mkCard("amber","📦","Stok Menipis",stokLow+" menu","segera isi ulang"):
+    mkCard("green","📦","Stok Aman","semua menu","tersedia");
   $("dash-cards").innerHTML=mkCard("blue","🛒","Transaksi",jF.length+" tx",qR+" pcs")+mkCard("green","📈","Pendapatan",rp(pR),"periode ini")+
     mkCard("red","📉","Pengeluaran",rp(kR),"periode ini")+mkCard(net>=0?"green":"red",net>=0?"💰":"⚠️","Laba/Rugi",rp(net),net>=0?"Laba ✅":"Rugi ❌")+
-    mkCard("amber","🎁","Sampel",totSampelQty+" pcs","nilai HPP "+rp(totSampelHPP))+
+    mkCard("amber","🎁","Sampel",totSampelQty+" pcs","nilai HPP "+rp(totSampelHPP))+stokAlertCard+
     mkCard("blue","🏦","Modal Bersih",rp(tM),"seluruh waktu");
   // Chart
   const cm=_v("dash-chart-mode")||"monthly";const ch=$("pl-chart");ch.innerHTML="";$("pl-list").innerHTML="";
@@ -1017,6 +1193,22 @@ function renderDashboard(){const{from,to,label}=getDR();
   if(!Object.keys(byM).length)tbP.innerHTML=nodata("","Belum ada data",3);
   else Object.entries(byM).sort((a,b)=>b[1].t-a[1].t).forEach(([mid,v])=>{
     tbP.innerHTML+=`<tr><td>${badge(getMC(mid),getML(mid))}</td><td>${badge("gray",v.n)}</td><td class="cgreen fw6">${rp(v.t)}</td></tr>`;});
+  // Stok dashboard table
+  const tbSt=document.querySelector("#dash-stok-table tbody");tbSt.innerHTML="";
+  const alertBadge=$("dash-stok-alert");
+  const stokProblems=S.menus.filter(m=>{const s=hitungStok(m.id);return s<=(m.stok_min||5);})
+    .sort((a,b)=>{const sa=hitungStok(a.id),sb=hitungStok(b.id);return sa-sb;});
+  if(!stokProblems.length){
+    alertBadge.style.display="none";
+    tbSt.innerHTML=`<tr><td colspan="3"><div class="empty"><div class="ei">✅</div><p>Semua stok aman</p></div></td></tr>`;
+  } else {
+    alertBadge.style.display="";alertBadge.textContent="⚠️ "+stokProblems.length+" perlu perhatian";
+    stokProblems.forEach(m=>{const s=hitungStok(m.id);const isEmpty=s<=0;
+      tbSt.innerHTML+=`<tr style="background:${isEmpty?"#fff5f5":"#fffbeb"}">
+        <td><strong>${m.nama}</strong></td>
+        <td><span class="${isEmpty?"stok-empty":"stok-low"}">${s}</span> <span class="tx3" style="font-size:.73rem">${m.satuan}</span></td>
+        <td>${isEmpty?badge("loss","🔴 Habis"):badge("amber","⚠️ Menipis")}</td></tr>`;});
+  }
   // Recent tx
   const allTx=[...jF.map(j=>({tanggal:j.tanggal,jenis:"Penjualan",ket:S.menus.find(m=>m.id===j.menu_id)?.nama||"—",met:j.metode,nominal:j.total,sign:1})),
     ...kF.map(k=>({tanggal:k.tanggal,jenis:"Pengeluaran",ket:k.keterangan,met:k.metode,nominal:k.jumlah,sign:-1})),
@@ -1079,6 +1271,9 @@ document.querySelectorAll(".dfb").forEach(btn=>btn.addEventListener("click",()=>
 $("btn-dash-apply").addEventListener("click",()=>{dashFrom=_v("dash-from");dashTo=_v("dash-to");if(!dashFrom||!dashTo)return alert("Isi tanggal!");if(dashFrom>dashTo)return alert("Tanggal awal harus lebih awal!");renderDashboard();});
 $("dash-chart-mode").addEventListener("change",renderDashboard);
 $("btn-save-menu").addEventListener("click",saveMenu);$("btn-cancel-menu").addEventListener("click",cancelMenuEdit);
+$("btn-save-stok").addEventListener("click",saveStok);
+$("btn-cancel-stok").addEventListener("click",()=>{$("stok-edit-panel").style.display="none";});
+$("stok-log-filter").addEventListener("change",renderMenu);
 $("btn-save-hpp").addEventListener("click",saveHPP);$("btn-preview-hpp").addEventListener("click",previewHPP);$("btn-cancel-hpp").addEventListener("click",cancelHPPEdit);$("btn-add-ing").addEventListener("click",()=>addIngRow());
 $("j-menu").addEventListener("change",updateHJ);$("j-qty").addEventListener("input",calcJT);
 $("btn-save-jual").addEventListener("click",saveJual);$("btn-cancel-jual").addEventListener("click",cancelJual);$("jual-filter").addEventListener("change",renderJual);
